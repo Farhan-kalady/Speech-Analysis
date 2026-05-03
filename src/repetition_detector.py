@@ -6,7 +6,7 @@ class RepetitionDetector:
     Detects repetitions in speech audio using MFCC cosine similarity on overlapping windows.
     """
 
-    def __init__(self, segment_duration=0.15, hop_duration=0.05, similarity_threshold=0.88):
+    def __init__(self, segment_duration=0.4, hop_duration=0.2, similarity_threshold=0.92):
         """
         Initializes the RepetitionDetector.
 
@@ -57,25 +57,32 @@ class RepetitionDetector:
             
         windows = []
         start_times = []
-        rms_energies = []
         for i in range(0, len(audio) - segment_samples + 1, hop_samples):
             window = audio[i:i + segment_samples]
+            rms = np.sqrt(np.mean(window**2))
+            if rms < 0.01:
+                continue
             mfcc = self.feature_extractor.extract_mfcc(window, sr)
             mfcc_mean = np.mean(mfcc, axis=1)
-            rms = np.sqrt(np.mean(window**2))
             windows.append(mfcc_mean)
             start_times.append(i / sr)
-            rms_energies.append(rms)
             
         repetitions = []
         current_rep = None
         
         for i in range(len(windows) - 1):
+            if abs((start_times[i+1] - start_times[i]) - self.hop_duration) > 1e-4:
+                if current_rep is not None:
+                    current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
+                    del current_rep["sim_sum"]
+                    repetitions.append(current_rep)
+                    current_rep = None
+                continue
+                
             sim = self._cosine_similarity(windows[i], windows[i+1])
-            is_silence = rms_energies[i] < 0.01 and rms_energies[i+1] < 0.01
             is_identical = sim == 1.0
             
-            if sim >= self.similarity_threshold and not is_silence and not is_identical:
+            if sim >= self.similarity_threshold and not is_identical:
                 if current_rep is None:
                     current_rep = {
                         "start": float(start_times[i]),
@@ -90,19 +97,32 @@ class RepetitionDetector:
                     current_rep["sim_sum"] += float(sim)
             else:
                 if current_rep is not None:
-                    if 2 <= current_rep["count"] <= 8:
-                        current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
-                        del current_rep["sim_sum"]
-                        repetitions.append(current_rep)
+                    current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
+                    del current_rep["sim_sum"]
+                    repetitions.append(current_rep)
                     current_rep = None
                     
         if current_rep is not None:
-            if 2 <= current_rep["count"] <= 8:
-                current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
-                del current_rep["sim_sum"]
-                repetitions.append(current_rep)
+            current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
+            del current_rep["sim_sum"]
+            repetitions.append(current_rep)
             
-        return repetitions
+        filtered_reps = [r for r in repetitions if 2 <= r["count"] <= 5]
+        
+        merged_reps = []
+        for rep in filtered_reps:
+            if not merged_reps:
+                merged_reps.append(rep)
+            else:
+                last_rep = merged_reps[-1]
+                if rep["start"] - last_rep["end"] < 0.5:
+                    last_rep["end"] = max(last_rep["end"], rep["end"])
+                    last_rep["count"] += rep["count"]
+                    last_rep["similarity"] = (last_rep["similarity"] + rep["similarity"]) / 2.0
+                else:
+                    merged_reps.append(rep)
+                    
+        return merged_reps
 
     def summarize(self, repetitions):
         """
@@ -114,7 +134,14 @@ class RepetitionDetector:
         Returns:
             dict: Summary statistics including total_repetitions and repetition_list.
         """
+        for rep in repetitions:
+            if rep["count"] == 2:
+                rep["note"] = "possible stutter"
+            elif rep["count"] >= 3:
+                rep["note"] = "likely stutter"
+                
         return {
             "total_repetitions": len(repetitions),
             "repetition_list": repetitions
         }
+
