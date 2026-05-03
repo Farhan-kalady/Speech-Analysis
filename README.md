@@ -1,74 +1,192 @@
-# Speech Analysis: Pause & Repetition Detection
+# 🎧 Audio Pause & Repetition Detection
 
-## 1. Project Overview
-This project is an automated speech analysis tool designed to detect both **pauses** (silences/hesitations) and **repetitions** (stuttering) in speech audio files. The system processes raw audio and yields a structured report indicating precisely when pauses or repeated segments occur, along with their duration and similarity.
+A Python-based system that analyzes speech audio to detect:
+- ⏸️ Silent pauses in speech
+- 🔁 Acoustic repetition patterns (stuttering) using MFCC similarity
+- 🗣️ Word-level repetitions (e.g., "I I I") using SpeechRecognition
 
-## 2. Setup Instructions
+This project combines signal processing and speech recognition to solve a real-world speech analysis problem.
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository_url>
-   cd speech-analysis
-   ```
+---
 
-2. **Set up a virtual environment (optional but recommended):**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
+## 🚀 Features
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Detects pause segments with start/end timestamps
+- Calculates total pause duration and pause ratio
+- Identifies repeated acoustic patterns using MFCC cosine similarity
+- Detects repeated words using Google SpeechRecognition API
+- Auto-calibrates energy threshold per audio file
+- Modular Python implementation across separate detector files
 
-## 3. Usage
+---
 
-Run the main analysis script by providing the path to an audio file (e.g., `.wav`, `.mp3`):
+## 🔄 System Pipeline
+
+```
+Audio Input
+    └── Preprocessor (librosa load → mono 16kHz → normalize → noise removal)
+         └── Feature Extractor (MFCC, RMS Energy, Mel-Spectrogram)
+              ├── Pause Detector   → Silent regions by RMS thresholding
+              └── Repetition Detector → Acoustic (MFCC cosine similarity)
+                                      → Word-level (SpeechRecognition transcription)
+                                           └── Structured Output (console + result.json)
+```
+
+---
+
+## ⚙️ Installation
+
 ```bash
-python main.py path/to/audio.wav
-```
-The script will output a structured report to the console and save a JSON result file in the `output/` directory.
-
-## 4. Approach Explanation
-
-- **Preprocessing:** Audio is loaded using `librosa`, downsampled to 16 kHz, and converted to mono. It is then peak-normalized to the range `[-1, 1]`, and stationary background noise is removed using the `noisereduce` library to improve feature extraction quality.
-- **Feature Extraction:** Extracts 13 Mel-frequency cepstral coefficients (MFCCs), Root Mean Square (RMS) energy, and mel-spectrograms (in dB) using `librosa`.
-- **Pause Detection:** Operates by thresholding the RMS energy on a per-frame basis. Consecutive silent frames are merged into contiguous segments. If a segment exceeds the `min_pause_duration` threshold, it is logged as a pause.
-- **Repetition Detection:** Splits the audio into overlapping temporal windows. For each window, the mean MFCC vector over time is computed. Consecutive windows are compared using cosine similarity. Sequences of highly similar, consecutive windows are flagged as repetitions.
-
-## 5. Output Format
-
-The analyzer outputs a `result.json` file in the following schema format:
-```json
-{
-    "file": "path/to/audio.wav",
-    "duration_seconds": 5.3,
-    "pauses": {
-        "total_pauses": 2,
-        "total_duration": 1.3,
-        "pause_list": [
-            {"start": 0.4, "end": 1.1, "duration": 0.7},
-            {"start": 2.3, "end": 2.9, "duration": 0.6}
-        ]
-    },
-    "repetitions": {
-        "total_repetitions": 1,
-        "repetition_list": [
-            {"start": 1.2, "end": 1.8, "similarity": 0.91, "count": 2}
-        ]
-    }
-}
+git clone https://github.com/your-username/speech-analysis.git
+cd speech-analysis
+pip install -r requirements.txt
 ```
 
-## 6. Challenges Faced
+---
 
-- **Noise Sensitivity:** Varying levels of background noise severely impacted energy-based pause detection. Applying spectral gating with `noisereduce` was necessary.
-- **Threshold Tuning:** Finding the right balance for RMS thresholds (`0.02`) and cosine similarity thresholds (`0.85`) across different speakers and recording qualities required empirical tuning.
-- **Granularity (Syllable vs. Word-level):** Detecting stuttering using mean MFCCs works decently for phoneme/syllable repetitions but can sometimes yield false positives for sustained vowels or slow speech.
+## ▶️ Run the Project
 
-## 7. Dataset References
+```bash
+python main.py sample_audio/your_file.wav
+```
 
-To train or tune thresholds, these datasets are commonly used in the field:
-- **UCLASS (University College London Archive of Stuttered Speech):** Specialized dataset containing stuttered speech.
-- **LibriSpeech:** Large corpus of read English speech, useful for establishing baseline non-stuttered speech characteristics.
+---
+
+## 🎬 Demo
+
+https://drive.google.com/file/d/1AIJTEHF9ie7RPSuR1TasgGJ5BlDymBp2/view?usp=sharing
+
+---
+
+## 📊 Sample Output
+
+```
+🎧 AUDIO ANALYSIS RESULTS
+File: test_sample.wav
+
+⏸️ Pause Segments:
+  [0.00s – 0.26s]  duration: 0.26s
+  [0.58s – 0.96s]  duration: 0.38s
+⏱️  Total Pause Duration: 1.95s
+    Pause Ratio: 22.4% of audio
+
+🔁 Acoustic Repetitions:
+  Detected pattern at: [0.6s – 1.2s]
+  Repetition Count: 2
+
+  Detected pattern at: [1.8s – 2.4s]
+  Repetition Count: 2
+
+🗣️ Word-Level Repetitions:
+  Word: "i"   Count: 3
+
+=== Calibration Summary ===
+Energy threshold used : 0.0041
+Pause ratio           : 22.4% of audio
+Repetition events     : 2
+Avg similarity score  : 0.93
+```
+
+---
+
+## 🧠 Approach
+
+### 1. Audio Preprocessing (`src/preprocessor.py`)
+- Audio loaded using `librosa` at 16000 Hz mono
+- Peak normalization applied to range [-1, 1]
+- Noise reduction using `noisereduce` with stationary mode
+
+### 2. Feature Extraction (`src/feature_extractor.py`)
+- **MFCC** — 13 Mel-Frequency Cepstral Coefficients per frame
+- **RMS Energy** — per-frame root mean square energy
+- **Mel-Spectrogram** — converted to dB scale
+
+### 3. Pause Detection (`src/pause_detector.py`)
+- RMS energy computed per frame (hop=256 samples)
+- Threshold auto-calibrated to 5th percentile RMS × 1.5
+- Consecutive silent frames merged into pause segments
+- Segments shorter than 0.3s filtered out (consonants, not silence)
+- Sanity check: warns if pause ratio exceeds 60%
+
+### 4. Acoustic Repetition Detection (`src/repetition_detector.py`)
+- Audio split into 0.4s windows with 0.2s hop (50% overlap)
+- Mean MFCC vector computed per window
+- Cosine similarity compared between consecutive windows
+- Windows with similarity ≥ 0.92 grouped into repetition events
+- Energy gate: windows with RMS < 0.01 skipped
+- Count filter: only events with 2–5 repeats kept
+
+### 5. Word-Level Repetition Detection (`src/analyzer.py`)
+- Audio transcribed using `SpeechRecognition` (Google API)
+- Transcribed words scanned for consecutive duplicates
+- Repeated words reported with count
+
+---
+
+## 📁 Project Structure
+
+```
+speech-analysis/
+├── src/
+│   ├── __init__.py
+│   ├── preprocessor.py          # Audio loading, normalization, noise removal
+│   ├── feature_extractor.py     # MFCC, RMS energy, spectrogram
+│   ├── pause_detector.py        # RMS thresholding, auto-calibration
+│   ├── repetition_detector.py   # MFCC cosine similarity, energy gate
+│   └── analyzer.py              # Orchestrator + word-level detection
+├── tests/
+│   └── test_basic.py
+├── sample_audio/
+│   └── test_sample.wav
+├── output/
+│   ├── result.json
+│   └── analysis.png
+├── main.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## ⚠️ Challenges
+
+- Choosing optimal silence threshold — solved with auto-calibration per file
+- Overlapping windows causing false repetitions — solved by reducing to 50% overlap
+- Synthetic test audio giving misleading results — solved by generating realistic test signal
+- Word detection accuracy depends on internet and audio clarity
+
+---
+
+## 🚀 Future Improvements
+
+- Integrate OpenAI Whisper for offline, higher-accuracy transcription
+- Add real-time microphone input support
+- Add waveform + RMS visualization dashboard
+
+---
+
+## 🛠️ Tech Stack
+
+| Library | Purpose |
+|---|---|
+| `librosa` | Audio loading, MFCC, mel-spectrogram |
+| `noisereduce` | Stationary noise removal |
+| `numpy` / `scipy` | Signal processing, cosine similarity |
+| `SpeechRecognition` | Word-level transcription |
+| `matplotlib` | Waveform and RMS visualization |
+
+---
+
+## 💡 Notes
+
+- Works best with `.wav` files sampled at 16kHz
+- Word-level detection requires an active internet connection
+- Detection accuracy depends on audio quality and background noise
+
+---
+
+## 👤 Author
+
+**Mohammed Farhan K**
+
+---
