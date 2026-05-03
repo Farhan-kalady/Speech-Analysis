@@ -1,4 +1,4 @@
-# 🎧 Audio Pause & Repetition Detection
+#  🎤 Speech Analysis: Pause & Repetition Detection
 
 A Python-based system that analyzes speech audio to detect:
 - ⏸️ Silent pauses in speech
