@@ -57,19 +57,25 @@ class RepetitionDetector:
             
         windows = []
         start_times = []
+        rms_energies = []
         for i in range(0, len(audio) - segment_samples + 1, hop_samples):
             window = audio[i:i + segment_samples]
             mfcc = self.feature_extractor.extract_mfcc(window, sr)
             mfcc_mean = np.mean(mfcc, axis=1)
+            rms = np.sqrt(np.mean(window**2))
             windows.append(mfcc_mean)
             start_times.append(i / sr)
+            rms_energies.append(rms)
             
         repetitions = []
         current_rep = None
         
         for i in range(len(windows) - 1):
             sim = self._cosine_similarity(windows[i], windows[i+1])
-            if sim >= self.similarity_threshold:
+            is_silence = rms_energies[i] < 0.01 and rms_energies[i+1] < 0.01
+            is_identical = sim == 1.0
+            
+            if sim >= self.similarity_threshold and not is_silence and not is_identical:
                 if current_rep is None:
                     current_rep = {
                         "start": float(start_times[i]),
@@ -84,15 +90,17 @@ class RepetitionDetector:
                     current_rep["sim_sum"] += float(sim)
             else:
                 if current_rep is not None:
-                    current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
-                    del current_rep["sim_sum"]
-                    repetitions.append(current_rep)
+                    if 2 <= current_rep["count"] <= 8:
+                        current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
+                        del current_rep["sim_sum"]
+                        repetitions.append(current_rep)
                     current_rep = None
                     
         if current_rep is not None:
-            current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
-            del current_rep["sim_sum"]
-            repetitions.append(current_rep)
+            if 2 <= current_rep["count"] <= 8:
+                current_rep["similarity"] = current_rep["sim_sum"] / (current_rep["count"] - 1)
+                del current_rep["sim_sum"]
+                repetitions.append(current_rep)
             
         return repetitions
 
