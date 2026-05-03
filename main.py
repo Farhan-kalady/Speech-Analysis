@@ -24,20 +24,28 @@ def main():
         json.dump(result, f, indent=4)
         
     # Pretty print to console
-    print("\n=== Speech Analysis Report ===")
+    print("\033[92m")
     filename = os.path.basename(result["file"])
-    print(f"File: {filename} | Duration: {result['duration_seconds']:.1f}s")
+    print(f"File: {filename}\n")
     
-    print("\n--- Pause Segments ---")
-    for p in result["pauses"]["pause_list"]:
-        print(f"[{p['start']:.1f}s – {p['end']:.1f}s] duration: {p['duration']:.1f}s")
-    print(f"Total Pause Duration: {result['pauses']['total_duration']:.1f}s")
-    print(f"Pause ratio: {result['pauses']['pause_ratio']}% of total audio")
+    print("Pause Segments:")
+    if result["pauses"]["pause_list"]:
+        pause_strs = [f"[{p['start']:.1f}s - {p['end']:.1f}s]" for p in result["pauses"]["pause_list"]]
+        print(", ".join(pause_strs))
+    else:
+        print("None")
+        
+    print(f"\nTotal Pause Duration: {result['pauses']['total_duration']:.1f}s\n")
     
-    print("\n--- Repetition Segments ---")
-    for r in result["repetitions"]["repetition_list"]:
-        print(f"[{r['start']:.1f}s – {r['end']:.1f}s] similarity: {r['similarity']:.2f} | count: {r['count']}")
-    print(f"Total Repetitions Detected: {result['repetitions']['total_repetitions']}")
+    print("Repetitions:")
+    if result["repetitions"]["repetition_list"]:
+        for r in result["repetitions"]["repetition_list"]:
+            # We don't have ASR for transcription, so we show the timestamp as the pattern
+            print(f"Detected pattern at: [{r['start']:.1f}s - {r['end']:.1f}s]")
+            print(f"Repetition Count: {r['count']}\n")
+    else:
+        print("None\n")
+    print("\033[0m", end="")
     
     # Healthy expected ranges:
     # - Pause ratio: 10% – 40% (not 94%)
