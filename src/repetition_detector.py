@@ -6,7 +6,7 @@ class RepetitionDetector:
     Detects repetitions in speech audio using MFCC cosine similarity on overlapping windows.
     """
 
-    def __init__(self, segment_duration=0.3, hop_duration=0.1, similarity_threshold=0.85):
+    def __init__(self, segment_duration=0.15, hop_duration=0.05, similarity_threshold=0.88):
         """
         Initializes the RepetitionDetector.
 
