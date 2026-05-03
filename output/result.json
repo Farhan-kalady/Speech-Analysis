@@ -1,0 +1,37 @@
+{
+    "file": "sample_audio\\real_stutter_sample.wav",
+    "duration_seconds": 9.6550625,
+    "pauses": {
+        "total_pauses": 1,
+        "total_duration": 0.30400000000000027,
+        "pause_ratio": 3.1,
+        "pause_list": [
+            {
+                "start": 4.064,
+                "end": 4.368,
+                "duration": 0.30400000000000027
+            }
+        ],
+        "energy_threshold": 2.743724358822419e-09
+    },
+    "repetitions": {
+        "total_repetitions": 2,
+        "repetition_list": [
+            {
+                "start": 0.0,
+                "end": 0.8,
+                "similarity": 0.9755437672138214,
+                "count": 3,
+                "note": "likely stutter"
+            },
+            {
+                "start": 8.4,
+                "end": 9.6,
+                "similarity": 0.9866875112056732,
+                "count": 5,
+                "note": "likely stutter"
+            }
+        ],
+        "avg_similarity": 0.9811156392097473
+    }
+}

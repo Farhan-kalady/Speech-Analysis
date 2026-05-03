@@ -140,8 +140,11 @@ class RepetitionDetector:
             elif rep["count"] >= 3:
                 rep["note"] = "likely stutter"
                 
+        avg_sim = sum(r["similarity"] for r in repetitions) / len(repetitions) if repetitions else 0.0
+                
         return {
             "total_repetitions": len(repetitions),
-            "repetition_list": repetitions
+            "repetition_list": repetitions,
+            "avg_similarity": float(avg_sim)
         }
 
