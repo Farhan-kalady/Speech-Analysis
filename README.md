@@ -54,7 +54,7 @@ python main.py sample_audio/your_file.wav
 
 ## 🎬 Demo
 
-https://drive.google.com/file/d/1AIJTEHF9ie7RPSuR1TasgGJ5BlDymBp2/view?usp=sharing
+https://drive.google.com/file/d/1ef97Ow49Is-V-g4xPUKB6qplk2d_1EoA/view?usp=drive_link
 
 ---
 
